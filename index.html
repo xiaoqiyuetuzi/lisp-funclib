@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoLISP 函数库</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Microsoft YaHei", sans-serif; display: flex; height: 100vh; background: #1e1e1e; color: #d4d4d4; }
+
+    /* 侧边栏 */
+    #sidebar {
+      width: 220px; min-width: 220px; background: #252526;
+      overflow-y: auto; border-right: 1px solid #3c3c3c;
+      display: flex; flex-direction: column;
+    }
+    #sidebar h1 {
+      font-size: 14px; padding: 16px 12px 8px;
+      color: #cccccc; border-bottom: 1px solid #3c3c3c;
+      letter-spacing: 1px; text-transform: uppercase;
+    }
+    .category { margin-top: 4px; }
+    .category-title {
+      padding: 6px 12px; font-size: 12px; color: #888;
+      cursor: pointer; user-select: none;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .category-title:hover { color: #ccc; }
+    .category-title::before { content: "▶"; font-size: 9px; transition: transform .2s; }
+    .category.open .category-title::before { transform: rotate(90deg); }
+    .func-list { display: none; }
+    .category.open .func-list { display: block; }
+    .func-item {
+      padding: 5px 12px 5px 24px; font-size: 13px;
+      cursor: pointer; color: #9cdcfe;
+    }
+    .func-item:hover { background: #2a2d2e; }
+    .func-item.active { background: #094771; color: #fff; }
+
+    /* 主内容 */
+    #main {
+      flex: 1; overflow-y: auto; padding: 32px 40px;
+    }
+    #content h2 { font-size: 22px; color: #4ec9b0; margin-bottom: 8px; }
+    #content .desc { color: #9cdcfe; margin-bottom: 20px; font-size: 14px; }
+    .section-title {
+      font-size: 12px; text-transform: uppercase; color: #888;
+      letter-spacing: 1px; margin: 20px 0 8px;
+      border-bottom: 1px solid #3c3c3c; padding-bottom: 4px;
+    }
+    .param-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 8px; }
+    .param-table th { text-align: left; padding: 6px 10px; background: #2d2d2d; color: #888; font-weight: normal; }
+    .param-table td { padding: 6px 10px; border-top: 1px solid #3c3c3c; }
+    .param-name { color: #9cdcfe; }
+    .param-type { color: #4ec9b0; }
+    pre {
+      background: #1a1a1a; border: 1px solid #3c3c3c;
+      border-radius: 4px; padding: 14px 16px;
+      font-size: 13px; overflow-x: auto; line-height: 1.6;
+    }
+    code { font-family: "Consolas", monospace; }
+    .kw { color: #c586c0; }
+    .fn { color: #dcdcaa; }
+    .str { color: #ce9178; }
+    .cmt { color: #6a9955; }
+    .var { color: #9cdcfe; }
+    .num { color: #b5cea8; }
+
+    #welcome { text-align: center; margin-top: 80px; color: #555; }
+    #welcome h2 { font-size: 28px; color: #4ec9b0; margin-bottom: 12px; }
+    #welcome p { font-size: 14px; line-height: 2; }
+  </style>
+</head>
+<body>
+
+<div id="sidebar">
+  <h1>AutoLISP 函数库</h1>
+  <div id="nav"></div>
+</div>
+
+<div id="main">
+  <div id="content">
+    <div id="welcome">
+      <h2>AutoLISP 函数库</h2>
+      <p>左侧选择分类和函数查看详细说明</p>
+      <p>包含块操作、图层、选择集、字符串等常用函数</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// 函数数据库 - 在这里添加函数
+// ============================================================
+const DB = {
+  "block": {
+    label: "block 块操作",
+    funcs: {
+      "rename": {
+        name: "block:rename",
+        desc: "重命名块定义，所有同名实例自动更新。支持普通块、属性块、动态块。",
+        params: [
+          { name: "old-name", type: "String", desc: "原块名" },
+          { name: "new-name", type: "String", desc: "新块名" }
+        ],
+        returns: "T 成功，nil 失败",
+        example: `<span class="cmt">;;; 将图中所有 "门-900" 块改名为 "门-1000"</span>
+(<span class="fn">block:rename</span> <span class="str">"门-900"</span> <span class="str">"门-1000"</span>)`,
+        src: `(<span class="kw">defun</span> <span class="fn">block:rename</span> (old-name new-name / app doc blks obj)
+  (<span class="kw">setq</span> <span class="var">app</span> (<span class="fn">vlax-get-acad-object</span>)
+        <span class="var">doc</span> (<span class="fn">vla-get-ActiveDocument</span> app)
+        <span class="var">blks</span> (<span class="fn">vla-get-Blocks</span> doc))
+  (<span class="kw">if</span> (<span class="fn">not</span> (<span class="fn">vl-catch-all-error-p</span>
+             (<span class="kw">setq</span> <span class="var">obj</span> (<span class="fn">vl-catch-all-apply</span> <span class="kw">'</span>vla-Item (<span class="fn">list</span> blks old-name)))))
+    (<span class="kw">if</span> (<span class="fn">not</span> (<span class="fn">vl-catch-all-error-p</span>
+               (<span class="fn">vl-catch-all-apply</span> <span class="kw">'</span>vla-put-Name (<span class="fn">list</span> obj new-name))))
+      (<span class="kw">progn</span> (<span class="fn">vla-Regen</span> doc acActiveViewport) T))))`
+      },
+      "get-effectivename": {
+        name: "block:get-effectivename",
+        desc: "获取块引用的有效名称，兼容动态块和匿名块（*U系列）。",
+        params: [
+          { name: "obj", type: "VLA-Object", desc: "块引用的 VLA 对象" }
+        ],
+        returns: "String 块的有效名称",
+        example: `<span class="cmt">;;; 获取选中块的有效名</span>
+(<span class="kw">setq</span> <span class="var">ent</span> (<span class="fn">car</span> (<span class="fn">entsel</span> <span class="str">"\n选择块: "</span>)))
+(<span class="fn">block:get-effectivename</span> (<span class="fn">vlax-ename->vla-object</span> ent))`,
+        src: `(<span class="kw">defun</span> <span class="fn">block:get-effectivename</span> (obj)
+  (<span class="kw">if</span> (<span class="fn">vlax-property-available-p</span> obj <span class="kw">'</span>EffectiveName)
+    (<span class="fn">vla-get-EffectiveName</span> obj)
+    (<span class="fn">vla-get-Name</span> obj)))`
+      },
+      "basepoint": {
+        name: "block:basepoint",
+        desc: "修改块的基点位置。flg=nil 保持插入点不变；flg=T 保持块在图中的视觉位置不变（补偿所有引用）。",
+        params: [
+          { name: "ent",  type: "Ename", desc: "块引用图元名" },
+          { name: "pt",   type: "List",  desc: "新基点坐标（WCS）" },
+          { name: "flg",  type: "T/nil", desc: "T=保持参照位置，nil=保持插入点" }
+        ],
+        returns: "nil",
+        example: `<span class="cmt">;;; 命令行调用</span>
+<span class="cmt">;;; GKPB  - 保持插入点不变</span>
+<span class="cmt">;;; GKPBR - 保持块在图中位置不变</span>
+(<span class="fn">c:GKPB</span>)
+(<span class="fn">c:GKPBR</span>)`,
+        src: `<span class="cmt">;;; 见 【GKP】部分块改名.lsp 中 gkp:changebasepoint 函数</span>`
+      }
+    }
+  },
+  "layer": {
+    label: "layer 图层",
+    funcs: {
+      "locked-p": {
+        name: "layer:locked-p",
+        desc: "判断指定图层是否被锁定。",
+        params: [
+          { name: "layer-name", type: "String", desc: "图层名称" }
+        ],
+        returns: "T 已锁定，nil 未锁定",
+        example: `(<span class="fn">layer:locked-p</span> <span class="str">"墙体"</span>)  <span class="cmt">; => T 或 nil</span>`,
+        src: `(<span class="kw">defun</span> <span class="fn">layer:locked-p</span> (layer-name)
+  (= <span class="num">4</span> (<span class="fn">logand</span> <span class="num">4</span> (<span class="fn">cdr</span> (<span class="fn">assoc</span> <span class="num">70</span> (<span class="fn">tblsearch</span> <span class="str">"LAYER"</span> layer-name))))))`
+      }
+    }
+  },
+  "string": {
+    label: "string 字符串",
+    funcs: {
+      "valid-blockname-p": {
+        name: "string:valid-blockname-p",
+        desc: "验证字符串是否为合法的块名（使用 snvalid 检查）。",
+        params: [
+          { name: "str", type: "String", desc: "待验证的字符串" }
+        ],
+        returns: "T 合法，nil 非法",
+        example: `(<span class="fn">string:valid-blockname-p</span> <span class="str">"门-900"</span>)   <span class="cmt">; => T</span>
+(<span class="fn">string:valid-blockname-p</span> <span class="str">"门/900"</span>)   <span class="cmt">; => nil</span>`,
+        src: `(<span class="kw">defun</span> <span class="fn">string:valid-blockname-p</span> (str)
+  (<span class="fn">snvalid</span> str))`
+      }
+    }
+  }
+};
+
+// ============================================================
+// 渲染侧边栏
+// ============================================================
+function buildNav() {
+  const nav = document.getElementById('nav');
+  for (const [catKey, cat] of Object.entries(DB)) {
+    const div = document.createElement('div');
+    div.className = 'category';
+    div.innerHTML = `<div class="category-title">${cat.label}</div><div class="func-list"></div>`;
+    const list = div.querySelector('.func-list');
+    for (const [fnKey, fn] of Object.entries(cat.funcs)) {
+      const item = document.createElement('div');
+      item.className = 'func-item';
+      item.textContent = fnKey;
+      item.onclick = () => showFunc(catKey, fnKey, item);
+      list.appendChild(item);
+    }
+    div.querySelector('.category-title').onclick = () => div.classList.toggle('open');
+    nav.appendChild(div);
+  }
+}
+
+// ============================================================
+// 显示函数详情
+// ============================================================
+function showFunc(catKey, fnKey, el) {
+  document.querySelectorAll('.func-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  el.closest('.category').classList.add('open');
+
+  const fn = DB[catKey].funcs[fnKey];
+  const params = fn.params.map(p =>
+    `<tr><td class="param-name">${p.name}</td><td class="param-type">${p.type}</td><td>${p.desc}</td></tr>`
+  ).join('');
+
+  document.getElementById('content').innerHTML = `
+    <h2>${fn.name}</h2>
+    <div class="desc">${fn.desc}</div>
+
+    <div class="section-title">参数</div>
+    <table class="param-table">
+      <tr><th>名称</th><th>类型</th><th>说明</th></tr>
+      ${params}
+    </table>
+
+    <div class="section-title">返回值</div>
+    <pre><code>${fn.returns}</code></pre>
+
+    <div class="section-title">示例</div>
+    <pre><code>${fn.example}</code></pre>
+
+    <div class="section-title">源码</div>
+    <pre><code>${fn.src}</code></pre>
+  `;
+}
+
+buildNav();
+</script>
+</body>
+</html>
