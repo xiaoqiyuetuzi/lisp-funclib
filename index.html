@@ -1,208 +1,342 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AutoLISP 函数库</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: "Microsoft YaHei", sans-serif; display: flex; height: 100vh; background: #1e1e1e; color: #d4d4d4; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoLISP 函数库</title>
+<style>
+:root {
+  --bg: #0d1117; --bg2: #161b22; --bg3: #21262d;
+  --border: #30363d; --text: #e6edf3; --text2: #8b949e;
+  --accent: #58a6ff; --green: #3fb950; --purple: #d2a8ff;
+  --orange: #ffa657; --red: #ff7b72; --teal: #79c0ff;
+  --yellow: #e3b341;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    /* 侧边栏 */
-    #sidebar {
-      width: 220px; min-width: 220px; background: #252526;
-      overflow-y: auto; border-right: 1px solid #3c3c3c;
-      display: flex; flex-direction: column;
-    }
-    #sidebar h1 {
-      font-size: 14px; padding: 16px 12px 8px;
-      color: #cccccc; border-bottom: 1px solid #3c3c3c;
-      letter-spacing: 1px; text-transform: uppercase;
-    }
-    .category { margin-top: 4px; }
-    .category-title {
-      padding: 6px 12px; font-size: 12px; color: #888;
-      cursor: pointer; user-select: none;
-      display: flex; align-items: center; gap: 4px;
-    }
-    .category-title:hover { color: #ccc; }
-    .category-title::before { content: "▶"; font-size: 9px; transition: transform .2s; }
-    .category.open .category-title::before { transform: rotate(90deg); }
-    .func-list { display: none; }
-    .category.open .func-list { display: block; }
-    .func-item {
-      padding: 5px 12px 5px 24px; font-size: 13px;
-      cursor: pointer; color: #9cdcfe;
-    }
-    .func-item:hover { background: #2a2d2e; }
-    .func-item.active { background: #094771; color: #fff; }
+/* ── 顶部栏 ── */
+header {
+  height: 56px; background: var(--bg2); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 20px; gap: 16px; flex-shrink: 0;
+  position: relative; z-index: 10;
+}
+.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo-icon {
+  width: 32px; height: 32px; background: linear-gradient(135deg, #58a6ff, #3fb950);
+  border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: bold; color: #0d1117;
+}
+.logo-text { font-size: 16px; font-weight: 600; color: var(--text); }
+.logo-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
+.header-search {
+  flex: 1; max-width: 360px; margin-left: auto;
+  position: relative;
+}
+.header-search input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 12px 6px 34px;
+  color: var(--text); font-size: 13px; outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.header-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(88,166,255,.15); }
+.header-search input::placeholder { color: var(--text2); }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text2); font-size: 13px; pointer-events: none; }
+.header-badge {
+  background: linear-gradient(135deg, #58a6ff22, #3fb95022);
+  border: 1px solid #58a6ff44; border-radius: 20px;
+  padding: 4px 12px; font-size: 12px; color: var(--accent);
+}
 
-    /* 主内容 */
-    #main {
-      flex: 1; overflow-y: auto; padding: 32px 40px;
-    }
-    #content h2 { font-size: 22px; color: #4ec9b0; margin-bottom: 8px; }
-    #content .desc { color: #9cdcfe; margin-bottom: 20px; font-size: 14px; }
-    .section-title {
-      font-size: 12px; text-transform: uppercase; color: #888;
-      letter-spacing: 1px; margin: 20px 0 8px;
-      border-bottom: 1px solid #3c3c3c; padding-bottom: 4px;
-    }
-    .param-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 8px; }
-    .param-table th { text-align: left; padding: 6px 10px; background: #2d2d2d; color: #888; font-weight: normal; }
-    .param-table td { padding: 6px 10px; border-top: 1px solid #3c3c3c; }
-    .param-name { color: #9cdcfe; }
-    .param-type { color: #4ec9b0; }
-    pre {
-      background: #1a1a1a; border: 1px solid #3c3c3c;
-      border-radius: 4px; padding: 14px 16px;
-      font-size: 13px; overflow-x: auto; line-height: 1.6;
-    }
-    code { font-family: "Consolas", monospace; }
-    .kw { color: #c586c0; }
-    .fn { color: #dcdcaa; }
-    .str { color: #ce9178; }
-    .cmt { color: #6a9955; }
-    .var { color: #9cdcfe; }
-    .num { color: #b5cea8; }
+/* ── 主体布局 ── */
+.body { display: flex; flex: 1; overflow: hidden; }
 
-    #welcome { text-align: center; margin-top: 80px; color: #555; }
-    #welcome h2 { font-size: 28px; color: #4ec9b0; margin-bottom: 12px; }
-    #welcome p { font-size: 14px; line-height: 2; }
-  </style>
+/* ── 侧边栏 ── */
+#sidebar {
+  width: 240px; min-width: 240px; background: var(--bg2);
+  border-right: 1px solid var(--border); overflow-y: auto;
+  padding: 12px 0;
+}
+#sidebar::-webkit-scrollbar { width: 4px; }
+#sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.category { margin-bottom: 4px; }
+.cat-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 16px; cursor: pointer; user-select: none;
+  color: var(--text2); font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .8px;
+  transition: color .15s;
+}
+.cat-header:hover { color: var(--text); }
+.cat-arrow { font-size: 9px; transition: transform .2s; margin-left: auto; }
+.category.open .cat-arrow { transform: rotate(90deg); }
+.cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.func-list { display: none; padding: 2px 0; }
+.category.open .func-list { display: block; }
+.func-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 16px 6px 32px; font-size: 13px;
+  cursor: pointer; color: var(--text2); border-radius: 0;
+  transition: background .1s, color .1s; position: relative;
+}
+.func-item:hover { background: var(--bg3); color: var(--text); }
+.func-item.active {
+  background: rgba(88,166,255,.1); color: var(--accent);
+}
+.func-item.active::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 2px; background: var(--accent); border-radius: 0 2px 2px 0;
+}
+.func-tag {
+  margin-left: auto; font-size: 10px; padding: 1px 6px;
+  border-radius: 10px; background: var(--bg3); color: var(--text2);
+}
+
+/* ── 内容区 ── */
+#main { flex: 1; overflow-y: auto; background: var(--bg); }
+#main::-webkit-scrollbar { width: 6px; }
+#main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+#content { max-width: 860px; margin: 0 auto; padding: 40px 48px; }
+
+/* 欢迎页 */
+#welcome { text-align: center; padding: 80px 20px; }
+.welcome-icon {
+  width: 72px; height: 72px; background: linear-gradient(135deg, #58a6ff, #3fb950);
+  border-radius: 20px; margin: 0 auto 24px; display: flex;
+  align-items: center; justify-content: center; font-size: 32px;
+}
+#welcome h2 { font-size: 28px; font-weight: 700; margin-bottom: 12px; }
+#welcome p { color: var(--text2); font-size: 14px; line-height: 2; }
+.stats { display: flex; gap: 32px; justify-content: center; margin-top: 40px; }
+.stat { text-align: center; }
+.stat-num { font-size: 28px; font-weight: 700; color: var(--accent); }
+.stat-label { font-size: 12px; color: var(--text2); margin-top: 4px; }
+
+/* 函数详情 */
+.fn-header { margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+.fn-name { font-size: 26px; font-weight: 700; color: var(--teal); font-family: Consolas, monospace; margin-bottom: 10px; }
+.fn-desc { color: var(--text2); font-size: 14px; line-height: 1.7; }
+.fn-meta { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.badge {
+  font-size: 11px; padding: 3px 10px; border-radius: 20px;
+  border: 1px solid; font-weight: 500;
+}
+.badge-blue { color: var(--accent); border-color: #58a6ff44; background: #58a6ff11; }
+.badge-green { color: var(--green); border-color: #3fb95044; background: #3fb95011; }
+
+.section { margin-bottom: 28px; }
+.section-label {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .8px; color: var(--text2); margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* 参数表 */
+.param-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.param-table th {
+  text-align: left; padding: 8px 12px; background: var(--bg2);
+  color: var(--text2); font-weight: 500; font-size: 11px;
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.param-table th:first-child { border-radius: 6px 0 0 0; }
+.param-table th:last-child { border-radius: 0 6px 0 0; }
+.param-table td { padding: 10px 12px; border-top: 1px solid var(--border); }
+.param-table tr:hover td { background: var(--bg2); }
+.pname { color: var(--teal); font-family: Consolas, monospace; font-size: 13px; }
+.ptype { color: var(--purple); font-family: Consolas, monospace; font-size: 12px; }
+
+/* 代码块 */
+.code-wrap { position: relative; }
+.code-wrap pre {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 16px 20px; font-size: 13px;
+  overflow-x: auto; line-height: 1.7; font-family: Consolas, monospace;
+}
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text2); font-size: 11px; padding: 4px 10px;
+  border-radius: 4px; cursor: pointer; transition: all .15s;
+  opacity: 0;
+}
+.code-wrap:hover .copy-btn { opacity: 1; }
+.copy-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.copy-btn.copied { background: var(--green); color: #fff; border-color: var(--green); }
+
+/* 返回值 */
+.returns-box {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 16px; font-size: 13px;
+  font-family: Consolas, monospace; color: var(--orange);
+}
+
+/* 语法高亮 */
+.kw { color: #ff7b72; }
+.fn { color: #d2a8ff; }
+.str { color: #a5d6ff; }
+.cmt { color: #8b949e; font-style: italic; }
+.var { color: #79c0ff; }
+.num { color: #f0883e; }
+.op { color: #ff7b72; }
+
+/* 搜索结果 */
+.search-results { padding: 16px 0; }
+.search-item {
+  padding: 10px 16px; cursor: pointer; border-radius: 6px;
+  margin: 2px 8px; transition: background .1s;
+}
+.search-item:hover { background: var(--bg3); }
+.search-item-name { font-size: 13px; color: var(--teal); font-family: Consolas, monospace; }
+.search-item-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.search-empty { text-align: center; padding: 40px; color: var(--text2); font-size: 13px; }
+
+/* 动画 */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+#content > * { animation: fadeIn .2s ease; }
+</style>
 </head>
 <body>
 
-<div id="sidebar">
-  <h1>AutoLISP 函数库</h1>
-  <div id="nav"></div>
-</div>
-
-<div id="main">
-  <div id="content">
-    <div id="welcome">
-      <h2>AutoLISP 函数库</h2>
-      <p>左侧选择分类和函数查看详细说明</p>
-      <p>包含块操作、图层、选择集、字符串等常用函数</p>
+<header>
+  <a class="logo" href="#">
+    <div class="logo-icon">λ</div>
+    <div>
+      <div class="logo-text">AutoLISP 函数库</div>
+      <div class="logo-sub">xiaoqiyuetuzi</div>
     </div>
+  </a>
+  <div class="header-search">
+    <span class="search-icon">⌕</span>
+    <input type="text" id="searchInput" placeholder="搜索函数名或说明..." autocomplete="off">
   </div>
+  <div class="header-badge" id="totalBadge">0 个函数</div>
+</header>
+
+<div class="body">
+  <div id="sidebar"><div id="nav"></div></div>
+  <div id="main"><div id="content"></div></div>
 </div>
 
 <script>
 // ============================================================
-// 函数数据库 - 在这里添加函数
+// 函数数据库
 // ============================================================
 const DB = {
-  "block": {
-    label: "block 块操作",
+  block: {
+    label: "block", desc: "块操作", color: "#58a6ff",
     funcs: {
-      "rename": {
-        name: "block:rename",
-        desc: "重命名块定义，所有同名实例自动更新。支持普通块、属性块、动态块。",
+      rename: {
+        name: "block:rename", tag: "常用",
+        desc: "重命名块定义，图中所有同名实例自动更新。支持普通块、属性块、动态块。",
         params: [
           { name: "old-name", type: "String", desc: "原块名" },
           { name: "new-name", type: "String", desc: "新块名" }
         ],
         returns: "T 成功，nil 失败",
-        example: `<span class="cmt">;;; 将图中所有 "门-900" 块改名为 "门-1000"</span>
-(<span class="fn">block:rename</span> <span class="str">"门-900"</span> <span class="str">"门-1000"</span>)`,
-        src: `(<span class="kw">defun</span> <span class="fn">block:rename</span> (old-name new-name / app doc blks obj)
-  (<span class="kw">setq</span> <span class="var">app</span> (<span class="fn">vlax-get-acad-object</span>)
-        <span class="var">doc</span> (<span class="fn">vla-get-ActiveDocument</span> app)
-        <span class="var">blks</span> (<span class="fn">vla-get-Blocks</span> doc))
-  (<span class="kw">if</span> (<span class="fn">not</span> (<span class="fn">vl-catch-all-error-p</span>
-             (<span class="kw">setq</span> <span class="var">obj</span> (<span class="fn">vl-catch-all-apply</span> <span class="kw">'</span>vla-Item (<span class="fn">list</span> blks old-name)))))
-    (<span class="kw">if</span> (<span class="fn">not</span> (<span class="fn">vl-catch-all-error-p</span>
-               (<span class="fn">vl-catch-all-apply</span> <span class="kw">'</span>vla-put-Name (<span class="fn">list</span> obj new-name))))
-      (<span class="kw">progn</span> (<span class="fn">vla-Regen</span> doc acActiveViewport) T))))`
+        example: `<span class="cmt">;;; 将图中所有 "门-900" 块改名为 "门-1000"</span>\n(<span class="fn">block:rename</span> <span class="str">"门-900"</span> <span class="str">"门-1000"</span>)`,
+        src: `(<span class="kw">defun</span> <span class="fn">block:rename</span> (old-name new-name <span class="op">/</span> app doc blks obj)\n  (<span class="kw">setq</span> <span class="var">app</span>  (<span class="fn">vlax-get-acad-object</span>)\n        <span class="var">doc</span>  (<span class="fn">vla-get-ActiveDocument</span> app)\n        <span class="var">blks</span> (<span class="fn">vla-get-Blocks</span> doc))\n  (<span class="kw">if</span> (<span class="fn">not</span> (<span class="fn">vl-catch-all-error-p</span>\n             (<span class="kw">setq</span> <span class="var">obj</span> (<span class="fn">vl-catch-all-apply</span> <span class="kw">'</span>vla-Item (<span class="fn">list</span> blks old-name)))))\n    (<span class="kw">if</span> (<span class="fn">not</span> (<span class="fn">vl-catch-all-error-p</span>\n               (<span class="fn">vl-catch-all-apply</span> <span class="kw">'</span>vla-put-Name (<span class="fn">list</span> obj new-name))))\n      (<span class="kw">progn</span> (<span class="fn">vla-Regen</span> doc acActiveViewport) T))))`
       },
       "get-effectivename": {
-        name: "block:get-effectivename",
-        desc: "获取块引用的有效名称，兼容动态块和匿名块（*U系列）。",
-        params: [
-          { name: "obj", type: "VLA-Object", desc: "块引用的 VLA 对象" }
-        ],
-        returns: "String 块的有效名称",
-        example: `<span class="cmt">;;; 获取选中块的有效名</span>
-(<span class="kw">setq</span> <span class="var">ent</span> (<span class="fn">car</span> (<span class="fn">entsel</span> <span class="str">"\n选择块: "</span>)))
-(<span class="fn">block:get-effectivename</span> (<span class="fn">vlax-ename->vla-object</span> ent))`,
-        src: `(<span class="kw">defun</span> <span class="fn">block:get-effectivename</span> (obj)
-  (<span class="kw">if</span> (<span class="fn">vlax-property-available-p</span> obj <span class="kw">'</span>EffectiveName)
-    (<span class="fn">vla-get-EffectiveName</span> obj)
-    (<span class="fn">vla-get-Name</span> obj)))`
+        name: "block:get-effectivename", tag: "工具",
+        desc: "获取块引用的有效名称，兼容动态块和匿名块（*U 系列）。",
+        params: [{ name: "obj", type: "VLA-Object", desc: "块引用的 VLA 对象" }],
+        returns: "String — 块的有效名称",
+        example: `(<span class="kw">setq</span> <span class="var">ent</span> (<span class="fn">car</span> (<span class="fn">entsel</span> <span class="str">"\n选择块: "</span>)))\n(<span class="fn">block:get-effectivename</span> (<span class="fn">vlax-ename->vla-object</span> ent))`,
+        src: `(<span class="kw">defun</span> <span class="fn">block:get-effectivename</span> (obj)\n  (<span class="kw">if</span> (<span class="fn">vlax-property-available-p</span> obj <span class="kw">'</span>EffectiveName)\n    (<span class="fn">vla-get-EffectiveName</span> obj)\n    (<span class="fn">vla-get-Name</span> obj)))`
       },
       "basepoint": {
-        name: "block:basepoint",
-        desc: "修改块的基点位置。flg=nil 保持插入点不变；flg=T 保持块在图中的视觉位置不变（补偿所有引用）。",
+        name: "block:basepoint", tag: "命令",
+        desc: "修改块的基点。GKPB 保持插入点不变；GKPBR 保持块在图中的视觉位置不变（自动补偿所有引用）。",
         params: [
-          { name: "ent",  type: "Ename", desc: "块引用图元名" },
-          { name: "pt",   type: "List",  desc: "新基点坐标（WCS）" },
-          { name: "flg",  type: "T/nil", desc: "T=保持参照位置，nil=保持插入点" }
+          { name: "flg", type: "T / nil", desc: "T = 保持参照位置，nil = 保持插入点" }
         ],
         returns: "nil",
-        example: `<span class="cmt">;;; 命令行调用</span>
-<span class="cmt">;;; GKPB  - 保持插入点不变</span>
-<span class="cmt">;;; GKPBR - 保持块在图中位置不变</span>
-(<span class="fn">c:GKPB</span>)
-(<span class="fn">c:GKPBR</span>)`,
-        src: `<span class="cmt">;;; 见 【GKP】部分块改名.lsp 中 gkp:changebasepoint 函数</span>`
+        example: `<span class="cmt">;;; 命令行输入</span>\nGKPB   <span class="cmt">; 保持插入点不变</span>\nGKPBR  <span class="cmt">; 保持块在图中位置不变</span>`,
+        src: `<span class="cmt">;;; 见 gkp:changebasepoint 函数\n;;; 支持动态块属性保留、锁定图层自动解锁、Undo 标记</span>`
       }
     }
   },
-  "layer": {
-    label: "layer 图层",
+  layer: {
+    label: "layer", desc: "图层操作", color: "#3fb950",
     funcs: {
       "locked-p": {
-        name: "layer:locked-p",
+        name: "layer:locked-p", tag: "判断",
         desc: "判断指定图层是否被锁定。",
-        params: [
-          { name: "layer-name", type: "String", desc: "图层名称" }
-        ],
+        params: [{ name: "layer-name", type: "String", desc: "图层名称" }],
         returns: "T 已锁定，nil 未锁定",
         example: `(<span class="fn">layer:locked-p</span> <span class="str">"墙体"</span>)  <span class="cmt">; => T 或 nil</span>`,
-        src: `(<span class="kw">defun</span> <span class="fn">layer:locked-p</span> (layer-name)
-  (= <span class="num">4</span> (<span class="fn">logand</span> <span class="num">4</span> (<span class="fn">cdr</span> (<span class="fn">assoc</span> <span class="num">70</span> (<span class="fn">tblsearch</span> <span class="str">"LAYER"</span> layer-name))))))`
+        src: `(<span class="kw">defun</span> <span class="fn">layer:locked-p</span> (layer-name)\n  (= <span class="num">4</span> (<span class="fn">logand</span> <span class="num">4</span> (<span class="fn">cdr</span> (<span class="fn">assoc</span> <span class="num">70</span>\n    (<span class="fn">tblsearch</span> <span class="str">"LAYER"</span> layer-name))))))`
       }
     }
   },
-  "string": {
-    label: "string 字符串",
+  string: {
+    label: "string", desc: "字符串处理", color: "#d2a8ff",
     funcs: {
       "valid-blockname-p": {
-        name: "string:valid-blockname-p",
-        desc: "验证字符串是否为合法的块名（使用 snvalid 检查）。",
-        params: [
-          { name: "str", type: "String", desc: "待验证的字符串" }
-        ],
+        name: "string:valid-blockname-p", tag: "验证",
+        desc: "验证字符串是否为合法的 AutoCAD 块名。",
+        params: [{ name: "str", type: "String", desc: "待验证的字符串" }],
         returns: "T 合法，nil 非法",
-        example: `(<span class="fn">string:valid-blockname-p</span> <span class="str">"门-900"</span>)   <span class="cmt">; => T</span>
-(<span class="fn">string:valid-blockname-p</span> <span class="str">"门/900"</span>)   <span class="cmt">; => nil</span>`,
-        src: `(<span class="kw">defun</span> <span class="fn">string:valid-blockname-p</span> (str)
-  (<span class="fn">snvalid</span> str))`
+        example: `(<span class="fn">string:valid-blockname-p</span> <span class="str">"门-900"</span>)   <span class="cmt">; => T</span>\n(<span class="fn">string:valid-blockname-p</span> <span class="str">"门/900"</span>)   <span class="cmt">; => nil</span>`,
+        src: `(<span class="kw">defun</span> <span class="fn">string:valid-blockname-p</span> (str)\n  (<span class="fn">snvalid</span> str))`
       }
     }
   }
 };
 
 // ============================================================
+// 统计
+// ============================================================
+let totalFuncs = 0;
+for (const cat of Object.values(DB)) totalFuncs += Object.keys(cat.funcs).length;
+document.getElementById('totalBadge').textContent = totalFuncs + ' 个函数';
+
+// ============================================================
 // 渲染侧边栏
 // ============================================================
-function buildNav() {
+function buildNav(filter = '') {
   const nav = document.getElementById('nav');
+  nav.innerHTML = '';
+  let hasResult = false;
+
   for (const [catKey, cat] of Object.entries(DB)) {
+    const matchFuncs = Object.entries(cat.funcs).filter(([k, fn]) =>
+      !filter || fn.name.includes(filter) || fn.desc.includes(filter)
+    );
+    if (filter && matchFuncs.length === 0) continue;
+    hasResult = true;
+
     const div = document.createElement('div');
-    div.className = 'category';
-    div.innerHTML = `<div class="category-title">${cat.label}</div><div class="func-list"></div>`;
+    div.className = 'category' + (filter || !catKey ? ' open' : '');
+    div.innerHTML = `
+      <div class="cat-header">
+        <span class="cat-dot" style="background:${cat.color}"></span>
+        ${cat.label}
+        <span style="color:var(--text2);font-size:11px;font-weight:400;margin-left:4px">${cat.desc}</span>
+        <span class="cat-arrow">▶</span>
+      </div>
+      <div class="func-list"></div>`;
+
     const list = div.querySelector('.func-list');
-    for (const [fnKey, fn] of Object.entries(cat.funcs)) {
+    const entries = filter ? matchFuncs : Object.entries(cat.funcs);
+    for (const [fnKey, fn] of entries) {
       const item = document.createElement('div');
       item.className = 'func-item';
-      item.textContent = fnKey;
+      item.dataset.cat = catKey; item.dataset.fn = fnKey;
+      item.innerHTML = `${fnKey}<span class="func-tag">${fn.tag||''}</span>`;
       item.onclick = () => showFunc(catKey, fnKey, item);
       list.appendChild(item);
     }
-    div.querySelector('.category-title').onclick = () => div.classList.toggle('open');
+    div.querySelector('.cat-header').onclick = () => div.classList.toggle('open');
+    if (filter) div.classList.add('open');
     nav.appendChild(div);
+  }
+
+  if (!hasResult) {
+    nav.innerHTML = `<div class="search-empty">未找到匹配函数</div>`;
   }
 }
 
@@ -211,36 +345,91 @@ function buildNav() {
 // ============================================================
 function showFunc(catKey, fnKey, el) {
   document.querySelectorAll('.func-item').forEach(i => i.classList.remove('active'));
-  el.classList.add('active');
-  el.closest('.category').classList.add('open');
+  if (el) { el.classList.add('active'); el.closest('.category').classList.add('open'); }
 
   const fn = DB[catKey].funcs[fnKey];
+  const cat = DB[catKey];
   const params = fn.params.map(p =>
-    `<tr><td class="param-name">${p.name}</td><td class="param-type">${p.type}</td><td>${p.desc}</td></tr>`
+    `<tr><td class="pname">${p.name}</td><td class="ptype">${p.type}</td><td style="color:var(--text2)">${p.desc}</td></tr>`
   ).join('');
 
   document.getElementById('content').innerHTML = `
-    <h2>${fn.name}</h2>
-    <div class="desc">${fn.desc}</div>
+    <div class="fn-header">
+      <div class="fn-name">${fn.name}</div>
+      <div class="fn-desc">${fn.desc}</div>
+      <div class="fn-meta">
+        <span class="badge badge-blue">${cat.label}</span>
+        <span class="badge badge-green">${fn.tag || 'util'}</span>
+      </div>
+    </div>
 
-    <div class="section-title">参数</div>
-    <table class="param-table">
-      <tr><th>名称</th><th>类型</th><th>说明</th></tr>
-      ${params}
-    </table>
+    <div class="section">
+      <div class="section-label">参数</div>
+      <table class="param-table">
+        <tr><th>名称</th><th>类型</th><th>说明</th></tr>
+        ${params}
+      </table>
+    </div>
 
-    <div class="section-title">返回值</div>
-    <pre><code>${fn.returns}</code></pre>
+    <div class="section">
+      <div class="section-label">返回值</div>
+      <div class="returns-box">${fn.returns}</div>
+    </div>
 
-    <div class="section-title">示例</div>
-    <pre><code>${fn.example}</code></pre>
+    <div class="section">
+      <div class="section-label">示例</div>
+      <div class="code-wrap">
+        <pre><code>${fn.example}</code></pre>
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      </div>
+    </div>
 
-    <div class="section-title">源码</div>
-    <pre><code>${fn.src}</code></pre>
-  `;
+    <div class="section">
+      <div class="section-label">源码</div>
+      <div class="code-wrap">
+        <pre><code>${fn.src}</code></pre>
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+      </div>
+    </div>`;
+}
+
+// ============================================================
+// 复制代码
+// ============================================================
+function copyCode(btn) {
+  const code = btn.previousElementSibling.innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = '已复制 ✓'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '复制'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ============================================================
+// 搜索
+// ============================================================
+document.getElementById('searchInput').addEventListener('input', e => {
+  buildNav(e.target.value.trim());
+});
+
+// ============================================================
+// 欢迎页
+// ============================================================
+function showWelcome() {
+  document.getElementById('content').innerHTML = `
+    <div id="welcome">
+      <div class="welcome-icon">λ</div>
+      <h2>AutoLISP 函数库</h2>
+      <p>收录常用 AutoLISP / Visual LISP 函数<br>左侧选择分类，或使用顶部搜索框快速查找</p>
+      <div class="stats">
+        <div class="stat"><div class="stat-num">${totalFuncs}</div><div class="stat-label">函数</div></div>
+        <div class="stat"><div class="stat-num">${Object.keys(DB).length}</div><div class="stat-label">分类</div></div>
+        <div class="stat"><div class="stat-num">2026</div><div class="stat-label">持续更新</div></div>
+      </div>
+    </div>`;
 }
 
 buildNav();
+showWelcome();
 </script>
 </body>
 </html>
